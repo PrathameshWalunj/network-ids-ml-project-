@@ -1,0 +1,30 @@
+# Network Intrusion Detection System using Machine Learning
+
+## Project Overview
+This project implements a Network Intrusion Detection System (IDS) using machine learning techniques, specifically the K-Nearest Neighbors (KNN) algorithm. The goal is to detect various types of network attacks by analyzing network traffic patterns from the CICIDS2017 dataset.
+
+## Features
+- Data analysis and preprocessing of the CICIDS2017 dataset
+- Implementation of KNN classifier for multi-class attack detection
+- Basic packet inspection capabilities using Scapy
+- Visualization of network traffic patterns and attack distributions
+
+## Installation
+To set up this project, follow these steps:
+
+1. Clone the repository:
+git clone https://github.com/PrathameshWalunj/network-ids-ml-project.git
+2. Install the required packages:
+pip install -r requirements.txt
+
+## Dataset
+This project uses the CICIDS2017 dataset, which includes:
+- Benign network traffic
+- Various attack types: DoS, DDoS, Brute Force, XSS, SQL Injection, Infiltration, Port Scan
+
+To use the dataset:
+1. Download it from: https://www.unb.ca/cic/datasets/ids-2017.html
+2. Place the CSV files in the `data/` directory
+
+## Usage
+1. Data Analysis and Model Training:
