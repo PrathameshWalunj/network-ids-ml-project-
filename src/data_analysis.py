@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import ipaddress
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
@@ -7,39 +8,59 @@ from sklearn.metrics import classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from tqdm import tqdm
 
 def preprocess_data(data):
+    print("Preprocessing data...")
     # Handle missing values
     data = data.replace([np.inf, -np.inf], np.nan).dropna()
-    
+
+    # Convert IP addresses to numerical values
+    if ' Source IP' in data.columns:
+        data[' Source IP'] = data[' Source IP'].apply(lambda x: int(ipaddress.ip_address(x)))
+    if ' Destination IP' in data.columns:
+        data[' Destination IP'] = data[' Destination IP'].apply(lambda x: int(ipaddress.ip_address(x)))
+
+    # Handle 'Flow ID' column
+    if 'Flow ID' in data.columns:
+        data = data.drop('Flow ID', axis=1)
+
     # Convert categorical variables to numerical
     le = LabelEncoder()
     label_column = ' Label' if ' Label' in data.columns else 'Label'
     data[label_column] = le.fit_transform(data[label_column])
-    
+
+    # Convert all columns to numeric, dropping any that can't be converted
+    for col in data.columns:
+        if col != label_column:
+            try:
+                data[col] = pd.to_numeric(data[col], errors='raise')
+            except ValueError:
+                print(f"Dropping column {col} as it cannot be converted to numeric")
+                data = data.drop(col, axis=1)
+
     # Separate features and target
-    columns_to_drop = [col for col in [' Label', 'Label', ' Flow ID', ' Source IP', ' Destination IP', ' Timestamp'] if col in data.columns]
-    X = data.drop(columns_to_drop, axis=1, errors='ignore')
     y = data[label_column]
-    
+    X = data.drop([label_column], axis=1)
+
     # Normalize numerical features
     scaler = StandardScaler()
     X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
-    
-    return X, y
 
+    print("Preprocessing completed.")
+    return X, y
 def train_and_evaluate_knn(X_train, X_test, y_train, y_test, n_neighbors=5):
-    # Train a KNN classifier
+    print(f"Training KNN model with {n_neighbors} neighbors...")
     knn = KNeighborsClassifier(n_neighbors=n_neighbors)
     knn.fit(X_train, y_train)
     
-    # Make predictions
+    print("Making predictions...")
     y_pred = knn.predict(X_test)
     
-    # Print classification report
+    print("Classification Report:")
     print(classification_report(y_test, y_pred))
     
-    # Plot and save confusion matrix
+    print("Generating confusion matrix...")
     cm = confusion_matrix(y_test, y_pred)
     plt.figure(figsize=(10,8))
     sns.heatmap(cm, annot=True, fmt='d')
@@ -49,29 +70,33 @@ def train_and_evaluate_knn(X_train, X_test, y_train, y_test, n_neighbors=5):
     plt.savefig(f'confusion_matrix_{n_neighbors}.png')
     plt.close()
     
+    print(f"Confusion matrix saved as confusion_matrix_{n_neighbors}.png")
     return knn
 
-# Get the path to the data directory
 data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 
-def explore_csv_files(directory):
+def explore_csv_files(directory, max_rows=None):
+    print(f"Exploring directory: {directory}")
     if not os.path.exists(directory):
         print(f"Directory not found: {directory}")
         return
-    
+
     csv_files = [f for f in os.listdir(directory) if f.endswith('.csv')]
-    
     if not csv_files:
         print(f"No CSV files found in {directory}")
         return
-    
+
+    print(f"Found {len(csv_files)} CSV files. Processing...")
+
     for file in csv_files:
         print(f"\nExploring file: {file}")
         file_path = os.path.join(directory, file)
         
         try:
-            data = pd.read_csv(file_path, encoding='utf-8', low_memory=False)
-            print("Data shape:", data.shape)
+            print(f"Reading CSV file (up to {max_rows} rows)...")
+            data = pd.read_csv(file_path, encoding='utf-8', low_memory=False, nrows=max_rows)
+            print(f"CSV file read successfully. Shape: {data.shape}")
+            
             print("\nColumn names:")
             print(data.columns.tolist())
             
@@ -85,29 +110,31 @@ def explore_csv_files(directory):
             print("\nFirst few rows:")
             print(data.head())
             
-            # Preprocess data
             X, y = preprocess_data(data)
             
-            # Split the data
+            print("Splitting data...")
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            print("Data split completed.")
             
-            # Train and evaluate KNN model
             knn_model = train_and_evaluate_knn(X_train, X_test, y_train, y_test)
-            
             print("\nKNN Model trained and evaluated.")
+            
             print("\n" + "="*50 + "\n")
         
         except Exception as e:
             print(f"Error processing {file}: {str(e)}")
             continue
 
-print("Exploring MachineLearningCVE data:")
-explore_csv_files(os.path.join(data_dir, 'MachineLearningCVE'))
+    print(f"Finished processing all files in {directory}")
 
-print("Exploring TrafficLabelling data:")
-explore_csv_files(os.path.join(data_dir, 'TrafficLabelling'))
-
-print("PCAP files in data directory:")
-pcap_files = [f for f in os.listdir(data_dir) if f.endswith('.pcap')]
-for pcap in pcap_files:
-    print(pcap)
+if __name__ == "__main__":
+    print("Exploring MachineLearningCVE data:")
+    explore_csv_files(os.path.join(data_dir, 'MachineLearningCVE'), max_rows=100000)
+    
+    print("\nExploring TrafficLabelling data:")
+    explore_csv_files(os.path.join(data_dir, 'TrafficLabelling'), max_rows=100000)
+    
+    print("\nPCAP files in data directory:")
+    pcap_files = [f for f in os.listdir(data_dir) if f.endswith('.pcap')]
+    for pcap in pcap_files:
+        print(pcap)
