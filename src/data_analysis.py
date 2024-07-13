@@ -56,9 +56,9 @@ def preprocess_data(data):
     scaler = StandardScaler()
     X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
-    return X, y, scaler
+    return X, y, scaler, X.columns.to_list()
 
-def train_and_evaluate_knn(X_train, X_test, y_train, y_test, scaler, n_neighbors=5):
+def train_and_evaluate_knn(X_train, X_test, y_train, y_test, scaler, feature_names, n_neighbors=5):
     print(f"Training KNN model with {n_neighbors} neighbors...")
     knn = KNeighborsClassifier(n_neighbors=n_neighbors)
     knn.fit(X_train, y_train)
@@ -84,7 +84,10 @@ def train_and_evaluate_knn(X_train, X_test, y_train, y_test, scaler, n_neighbors
     joblib.dump(knn, model_path)
     print(f"Saving scaler to {scaler_path}")
     joblib.dump(scaler, scaler_path)
-
+   
+    feature_names_path = os.path.join(os.path.dirname(__file__), 'feature_names.joblib')
+    print(f"Saving feature names to {feature_names_path}")
+    joblib.dump(feature_names, feature_names_path)
     return knn
 
 
@@ -125,16 +128,17 @@ def explore_csv_files(directory, max_rows=None):
             print("\nFirst few rows:")
             print(data.head())
             
-            X, y, scaler = preprocess_data(data)
+            X, y, scaler, feature_names = preprocess_data(data)
             
             print("Splitting data...")
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
             print("Data split completed.")
             
-            knn_model = train_and_evaluate_knn(X_train, X_test, y_train, y_test, scaler)
+            knn_model = train_and_evaluate_knn(X_train, X_test, y_train, y_test, scaler, feature_names)
             print("\nKNN Model trained and evaluated.")
             
             print("\n" + "="*50 + "\n")
+            
         
         except Exception as e:
             print(f"Error processing {file}: {str(e)}")
@@ -153,3 +157,4 @@ if __name__ == "__main__":
     pcap_files = [f for f in os.listdir(data_dir) if f.endswith('.pcap')]
     for pcap in pcap_files:
         print(pcap)
+    
