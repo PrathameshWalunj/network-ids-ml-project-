@@ -9,9 +9,12 @@ import joblib
 import os
 import ipaddress
 from malware_analysis import analyze_file
-import random
 import time
 
+
+if 'quote_index' not in st.session_state:
+    st.session_state.quote_index = 0
+    st.session_state.last_update = time.time()
 
 # Paths
 data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
@@ -25,9 +28,6 @@ def load_quotes(file_name= 'quotes.txt'):
     
 quotes = load_quotes()
 
-if 'quote_index' not in st.session_state:
-    st.session_state.quote_index = 0
-    st.session_state.last_update = time.time()
 
 
 
